@@ -1,0 +1,15 @@
+import  express  from "express";
+import categoryRoutes from "./routes/categoryRoutes";
+
+const app = express();
+const PORT = 3000;
+
+app.get('/' , (req, res) => {
+    res.send("Hello world")
+});
+
+app.use("/categories", categoryRoutes);
+
+app.listen(PORT , () => {
+    console.log(`server running on http://localhost:${PORT}`);
+});
