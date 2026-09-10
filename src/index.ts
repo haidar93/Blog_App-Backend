@@ -1,5 +1,6 @@
 import  express  from "express";
 import categoryRoutes from "./routes/categoryRoutes";
+import postRoutes from "./routes/postRoutes";
 
 const app = express();
 const PORT = 3000;
@@ -9,6 +10,7 @@ app.get('/' , (req, res) => {
 });
 
 app.use("/categories", categoryRoutes);
+app.use("/posts", postRoutes);s
 
 app.listen(PORT , () => {
     console.log(`server running on http://localhost:${PORT}`);

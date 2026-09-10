@@ -10,8 +10,8 @@ export const categoriesTable = mysqlTable("categories", {
 export const postsTable = mysqlTable("posts", {
     id: int("id").autoincrement().primaryKey(),
     categoryId: int("category_id").notNull().references(() => categoriesTable.id, { onDelete: "cascade" }),
-    title: varchar("titble", { length: 255 }).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
     content: text("content").notNull(),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
-});
+}); 
