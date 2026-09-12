@@ -2,32 +2,30 @@ import { Request, Response } from "express";
 import { db } from "../config/db";
 import { postsTable, categoriesTable } from "../config/schema";
 import { eq } from "drizzle-orm";
-import { cpSync } from "node:fs";
-import { title } from "node:process";
 
 export const getAllPosts = async (req: Request, res: Response) => {
-    try {
-        const posts = await db
-        .select({
-            id: postsTable.id,
-            title: postsTable.title,
-            content: postsTable.content,
-            categoryId: postsTable.categoryId,
-            categoryName: categoriesTable.name,
-        })
-        .from(postsTable)
-        .leftJoin(categoriesTable, eq(postsTable.categoryId, categoriesTable.id))
+  try {
+    const posts = await db
+      .select({
+        id: postsTable.id,
+        title: postsTable.title,
+        content: postsTable.content,
+        categoryId: postsTable.categoryId,
+        categoryName: categoriesTable.name,
+      })
+      .from(postsTable)
+      .leftJoin(categoriesTable, eq(postsTable.categoryId, categoriesTable.id));
 
-        res.status(200).json({
-            message: "Berhasil mengambil data artikel",
-            data: posts,
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: "Terjadi kesalahan server",
-            error: error,
-        });
-    }
+    res.status(200).json({
+      message: "Berhasil mengambil data artikel",
+      data: posts,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Terjadi kesalahan server",
+      error: error,
+    });
+  }
 };
 
 export const createPost = async (req: Request, res: Response) => {
@@ -66,39 +64,38 @@ export const createPost = async (req: Request, res: Response) => {
 };
 
 export const getPostById = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-        const post = await db
-        .select ({
-            id: postsTable.id,
-            title: postsTable.title,
-            content: postsTable.content,
-            categoryId: postsTable.categoryId,
-            categoryName: categoriesTable.name,
-        })
-        .from (postsTable)
-        .leftJoin (categoriesTable, eq(postsTable.categoryId, categoriesTable.id))
-        .where (eq(postsTable.id, Number(id)));
+    const post = await db
+      .select({
+        id: postsTable.id,
+        title: postsTable.title,
+        content: postsTable.content,
+        categoryId: postsTable.categoryId,
+        categoryName: categoriesTable.name,
+      })
+      .from(postsTable)
+      .leftJoin(categoriesTable, eq(postsTable.categoryId, categoriesTable.id))
+      .where(eq(postsTable.id, Number(id)));
 
-        if (post.length ===0) {
-            return res.status(404).json({
-                message: "Artikel tidak ditemukan",
-            });
-        }
-
-        res.status(200).json ({
-            message: "Berhasil mengambil data arikel",
-            data: post[0],
-        })
-    } catch (error) {
-        console.log(error);
-        res.status(500).json ({
-            message: "Terjdi kesalahan server",
-            error: error instanceof Error ? error.message : "Unkown error"
-        });
-        
+    if (post.length === 0) {
+      return res.status(404).json({
+        message: "Artikel tidak ditemukan",
+      });
     }
+
+    res.status(200).json({
+      message: "Berhasil mengambil data artikel",
+      data: post[0],
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: "Terjadi kesalahan server",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
 };
 
 export const updatePost = async (req: Request, res: Response) => {
@@ -107,15 +104,15 @@ export const updatePost = async (req: Request, res: Response) => {
     const { title, content, categoryId } = req.body;
 
     if (!title || !content || !categoryId) {
-      return res.status(400).json ({
+      return res.status(400).json({
         message: "Title, content, dan categoryId wajib diisi",
       });
     }
 
     const category = await db
-    .select()
-    .from(categoriesTable)
-    .where(eq(categoriesTable.id, categoryId));
+      .select()
+      .from(categoriesTable)
+      .where(eq(categoriesTable.id, categoryId));
 
     if (category.length === 0) {
       return res.status(400).json({
@@ -124,31 +121,31 @@ export const updatePost = async (req: Request, res: Response) => {
     }
 
     const existingPost = await db
-    .select()
-    .from(postsTable)
-    .where(eq(postsTable.id, Number(id)));
+      .select()
+      .from(postsTable)
+      .where(eq(postsTable.id, Number(id)));
 
-    if (category.length === 0) {
-      return res.status(400).json({
+    if (existingPost.length === 0) {
+      return res.status(404).json({
         message: "Artikel tidak ditemukan",
       });
     }
 
     await db
-    .update(postsTable)
-    .set({ title, content, categoryId})
-    .where (eq(postsTable.id, Number(id)));
+      .update(postsTable)
+      .set({ title, content, categoryId })
+      .where(eq(postsTable.id, Number(id)));
 
     res.status(200).json({
       message: "Berhasil mengubah artikel",
-      data: { id: Number(id), title, content, categoryId},
+      data: { id: Number(id), title, content, categoryId },
     });
   } catch (error) {
     console.log(error);
     res.status(500).json({
       message: "Terjadi kesalahan server",
-      error: error instanceof Error ? error.message :  "Unknown error"
-    })
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
   }
 };
 
@@ -157,20 +154,26 @@ export const deletePost = async (req: Request, res: Response) => {
     const { id } = req.params;
 
     const existingPost = await db
-    .select()
-    .from(postsTable)
-    .where(eq(postsTable.id, Number(id)));
+      .select()
+      .from(postsTable)
+      .where(eq(postsTable.id, Number(id)));
 
-  if (existingPost.length === 0) {
-    return res.status(400).json({
+    if (existingPost.length === 0) {
+      return res.status(404).json({
+        message: "Artikel tidak ditemukan",
+      });
+    }
+
+    await db.delete(postsTable).where(eq(postsTable.id, Number(id)));
+
+    res.status(200).json({
       message: "Berhasil menghapus artikel",
     });
-  }
   } catch (error) {
     console.log(error);
     res.status(500).json({
-      message: "Terjadi  keselahan server",
+      message: "Terjadi kesalahan server",
       error: error instanceof Error ? error.message : "Unknown error",
     });
   }
-}
+};
