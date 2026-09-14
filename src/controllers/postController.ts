@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { db } from "../config/db";
 import { postsTable, categoriesTable } from "../config/schema";
 import { eq } from "drizzle-orm";
+import cloudinary from "../config/cloudinary";
 
 export const getAllPosts = async (req: Request, res: Response) => {
   try {
@@ -10,6 +11,7 @@ export const getAllPosts = async (req: Request, res: Response) => {
         id: postsTable.id,
         title: postsTable.title,
         content: postsTable.content,
+        imageUrl: postsTable.imageUrl, // FIXED: Tambahkan imageUrl
         categoryId: postsTable.categoryId,
         categoryName: categoriesTable.name,
       })
@@ -23,7 +25,7 @@ export const getAllPosts = async (req: Request, res: Response) => {
   } catch (error) {
     res.status(500).json({
       message: "Terjadi kesalahan server",
-      error: error,
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
@@ -38,10 +40,13 @@ export const createPost = async (req: Request, res: Response) => {
       });
     }
 
+    // FIXED: Konversi categoryId ke Number
+    const numericCategoryId = Number(categoryId);
+
     const category = await db
       .select()
       .from(categoriesTable)
-      .where(eq(categoriesTable.id, categoryId));
+      .where(eq(categoriesTable.id, numericCategoryId));
 
     if (category.length === 0) {
       return res.status(400).json({
@@ -49,13 +54,41 @@ export const createPost = async (req: Request, res: Response) => {
       });
     }
 
-    const result = await db.insert(postsTable).values({ title, content, categoryId });
+    let imageUrl: string | null = null;
+
+    if (req.file) {
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "blogd" },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        stream.end(req.file!.buffer);
+      });
+      imageUrl = uploadResult.secure_url;
+    }
+
+    const result = await db.insert(postsTable).values({
+      title,
+      content,
+      categoryId: numericCategoryId,
+      imageUrl,
+    });
 
     res.status(201).json({
       message: "Berhasil menambahkan artikel",
-      data: { id: result[0].insertId, title, content, categoryId },
+      data: { 
+        id: result[0].insertId, 
+        title, 
+        content, 
+        categoryId: numericCategoryId, 
+        imageUrl 
+      },
     });
   } catch (error) {
+    console.log(error);
     res.status(500).json({
       message: "Terjadi kesalahan server",
       error: error instanceof Error ? error.message : "Unknown error",
@@ -72,6 +105,7 @@ export const getPostById = async (req: Request, res: Response) => {
         id: postsTable.id,
         title: postsTable.title,
         content: postsTable.content,
+        imageUrl: postsTable.imageUrl, // FIXED: Tambahkan imageUrl
         categoryId: postsTable.categoryId,
         categoryName: categoriesTable.name,
       })
@@ -109,10 +143,12 @@ export const updatePost = async (req: Request, res: Response) => {
       });
     }
 
+    const numericCategoryId = Number(categoryId);
+
     const category = await db
       .select()
       .from(categoriesTable)
-      .where(eq(categoriesTable.id, categoryId));
+      .where(eq(categoriesTable.id, numericCategoryId));
 
     if (category.length === 0) {
       return res.status(400).json({
@@ -131,14 +167,36 @@ export const updatePost = async (req: Request, res: Response) => {
       });
     }
 
+    // FIXED: Dukung update gambar di updatePost
+    let imageUrl = existingPost[0].imageUrl;
+
+    if (req.file) {
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "blogd" },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        stream.end(req.file!.buffer);
+      });
+      imageUrl = uploadResult.secure_url;
+    }
+
     await db
       .update(postsTable)
-      .set({ title, content, categoryId })
+      .set({ 
+        title, 
+        content, 
+        categoryId: numericCategoryId, 
+        imageUrl 
+      })
       .where(eq(postsTable.id, Number(id)));
 
     res.status(200).json({
       message: "Berhasil mengubah artikel",
-      data: { id: Number(id), title, content, categoryId },
+      data: { id: Number(id), title, content, categoryId: numericCategoryId, imageUrl },
     });
   } catch (error) {
     console.log(error);
